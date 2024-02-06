@@ -38,7 +38,7 @@ public class WebViewSample extends Application {
         stage.setTitle("Web View");
         scene = new Scene(new Browser(),900,600, Color.web("#666970"));
         stage.setScene(scene);
-        scene.getStylesheets().add("css/BrowserToolbar.css");
+        scene.getStylesheets().add( WebViewSample.class.getResource("/css/BrowserToolbar.css").toExternalForm());
         // show stage
         stage.show();
     }
