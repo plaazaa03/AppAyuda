@@ -4,6 +4,7 @@ import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.ListChangeListener;
 import javafx.concurrent.Worker;
 import javafx.concurrent.Worker.State;
 import javafx.event.ActionEvent;
@@ -15,6 +16,7 @@ import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Hyperlink;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -24,6 +26,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.scene.web.PopupFeatures;
 import javafx.scene.web.WebEngine;
+import javafx.scene.web.WebHistory;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
 import javafx.util.Callback;
@@ -38,7 +41,7 @@ public class WebViewSample extends Application {
         stage.setTitle("Web View");
         scene = new Scene(new Browser(),900,600, Color.web("#666970"));
         stage.setScene(scene);
-        scene.getStylesheets().add( WebViewSample.class.getResource("/css/BrowserToolbar.css").toExternalForm());
+        scene.getStylesheets().add(WebViewSample.class.getResource("/css/BrowserToolbar.css").toExternalForm());
         // show stage
         stage.show();
     }
@@ -51,35 +54,27 @@ class Browser extends Region {
     private HBox toolBar;
 
     final private static String[] imageFiles = new String[]{
-            "/Images/product.png",
-            "/Images/blog.png",
-            "/Images/documentation.png",
-            "/Images/partners.png",
             "/Images/help.png",
             "/Images/twitter.jpg",
             "/Images/moodle.jpg",
-            "/Images/facebook.jpg"
+            "/Images/facebook.jpg",
+            "/Images/documentation.png"
     };
     final private static String[] captions = new String[]{
-            "Products",
-            "Blogs",
-            "Documentation",
-            "Partners",
             "Help",
             "Twitter",
             "Moodle",
-            "Facebook"
+            "Facebook",
+            "Documentation"
     };
 
     final private static String[] urls = new String[]{
-            "http://www.oracle.com/products/index.html",
-            "http://blogs.oracle.com/",
-            "http://docs.oracle.com/javase/index.html",
-            "http://www.oracle.com/partners/index.html",
             WebViewSample.class.getResource("/help.html").toExternalForm(),
             "https://twitter.com/losMontecillos",
-            "https://educacionadistancia.juntadeandalucia.es/centros/login/index.php",
-            "https://www.facebook.com/ieslosmontecillos/?locale=es_ES"
+            "https://educacionadistancia.juntadeandalucia.es/centros/",
+            "https://www.facebook.com/ieslosmontecillos/?locale=es_ES",
+            "http://www.oracle.com/products/index.html"
+
     };
 
     final ImageView selectedImage = new ImageView();
@@ -89,7 +84,11 @@ class Browser extends Region {
     final WebEngine webEngine = browser.getEngine();
     final Button toggleHelpTopics = new Button("Toggle Help Topics");
     final WebView smallView = new WebView();
+    final WebHistory history = webEngine.getHistory();
     private boolean needDocumentationButton = false;
+    final ComboBox comboBox = new ComboBox();
+
+
 
     public Browser() {
         //apply the styles
@@ -111,11 +110,13 @@ class Browser extends Region {
             });
         }
 
+        comboBox.setPrefSize(120,80);
         // create the toolbar
         toolBar = new HBox();
         toolBar.setAlignment(Pos.CENTER);
         toolBar.getStyleClass().add("browser-toolbar");
         toolBar.getChildren().addAll(hpls);
+        toolBar.getChildren().add(comboBox);
         toolBar.getChildren().add(createSpacer());
 
         //set action for the button
@@ -138,6 +139,29 @@ class Browser extends Region {
                     }
                 }
         );
+
+        //process history
+        final WebHistory history = webEngine.getHistory();
+        history.getEntries().addListener(
+                (ListChangeListener.Change<? extends WebHistory.Entry> c) -> {
+                    c.next();
+                    c.getRemoved().stream().forEach((e) -> {
+                        comboBox.getItems().remove(e.getUrl());
+                    });
+                    c.getAddedSubList().stream().forEach((e) -> {
+                        comboBox.getItems().add(e.getUrl());
+                    });
+                });
+
+        //set the behavior for the history combobox
+        comboBox.setOnAction((Event ev) -> {
+            int offset
+                    = comboBox.getSelectionModel().getSelectedIndex()
+                    - history.getCurrentIndex();
+            history.go(offset);
+        });
+
+
         // process page loading
         webEngine.getLoadWorker().stateProperty().addListener(
                 new ChangeListener<State>() {
